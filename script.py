@@ -3,8 +3,6 @@ import openpyxl
 import PySimpleGUI as sg
 import re
 
-
-
 class Componente:
 	def __init__(self, tipo1):
 		self.tipo = tipo1
@@ -37,7 +35,7 @@ def funcion(nombre,resultado):
 		# ((?P<TrueValue>[a-zA-Z]+)\.(?P<FalseValue>[a-zA-Z]+)\.) | 
 		((?P<MinValue>\d+)\.(?P<MaxValue>\d+)\.(?P<Resolution>[\d\.]+)\.) |
 	)
-	(?P<Nombre>[a-zA-z0-9]+)
+	(?P<Nombre>[a-zA-z0-9_]+)
 	""",re.VERBOSE)
 
 	s=nombre
@@ -46,28 +44,45 @@ def funcion(nombre,resultado):
 	if(m!=None):
 		m=m.groupdict()
 		if hasattr(resultado, '__iter__'):  # es un rango de celdas
-			pass
-			lista = []
-			
-			counter=0
-			for row in resultado:
-				for cell in row:
-					match m.get('Tipo'):
-						case 'PUE.NUM.':
-							obj = Componente("NUM")
-						case 'PUE.STRING.':
-							obj = Componente("STRING")
-						case 'PUE.SLIDE.':
-							print("Warning: Range SLIDE not supported!")
-						case 'PUE.SWITCH.':
-							obj = Componente("SWITCH")
-					obj.nombre = m.get('Nombre')+"{"+str(counter)+"}"
-					obj.resultado = cell
-					obj.valor=cell.value
-					lista.append(obj)
-					counter+=1
 
-			return lista
+			if m.get('Tipo')=='PUE.TABLE.':
+				obj = Componente("TABLE")
+				obj.nombre = str(m.get('Nombre'))
+				h=len(resultado)
+				w=len(resultado[0])
+				obj.valores = [[0 for x in range(w)] for y in range(h)] 
+				# for row in resultado:
+				# 	for cell in row:
+				# 		obj.valores[int(counter/ancho)][counter%ancho]=cell.value
+				# 		counter+=1
+				for i in range(h):
+					for j in range(w):
+						obj.valores[i][j]=str(resultado[i][j].value)
+				return [obj]
+						
+			else:
+				counter=0
+				lista = []
+				for row in resultado:
+					for cell in row:
+						match m.get('Tipo'):
+							case 'PUE.NUM.':
+								obj = Componente("NUM")
+							case 'PUE.STRING.':
+								obj = Componente("STRING")
+							case 'PUE.SLIDE.':
+								print("Warning: Range SLIDE not supported!")
+							case 'PUE.SWITCH.':
+								obj = Componente("SWITCH")
+							case _:
+								print('Error! No se matchea con ningun caso!')
+						obj.nombre = m.get('Nombre')+"{"+str(counter)+"}"
+						obj.resultado = cell
+						obj.valor=cell.value
+						lista.append(obj)
+						counter+=1
+
+				return lista
 		else:  # es una celda
 			
 			match m.get('Tipo'):
@@ -95,12 +110,12 @@ def funcion(nombre,resultado):
 
 def make_window(componentes):
 	
-	NAME_SIZE = 23
+	NAME_SIZE = 35
 	def name(name):
 		dots = NAME_SIZE-len(name)-2
 		return sg.Text(name + ' ' + '•'*dots, size=(NAME_SIZE,1), justification='r',pad=(0,0), font='Courier 10')
 	
-	layout=[[sg.Input(FILENAME,key='browse',readonly=True,enable_events=True,s=33), sg.FileBrowse( target='browse')]]
+	layout=[[sg.Input(FILENAME,key='browse',readonly=True,enable_events=True,s=35,font='Courier 10'), sg.FileBrowse( target='browse')]]
 
 # 				[[sg.Input(key='_FILEBROWSE_', enable_events=True, visible=False)],
 #             [sg.FileBrowse(target='_FILEBROWSE_')],
@@ -120,8 +135,14 @@ def make_window(componentes):
 				# c.Update(componente.valor)
 			case 'SWITCH':
 				c = [name(componente.nombre), sg.Checkbox('',default=componente.valor=='True',key=componente.nombre)],
-
+			case 'TABLE':
+				layout.append([name(componente.nombre)])
+				c = [sg.Table(componente.valores[1:],headings=componente.valores[0],key=componente.nombre, expand_x=True,num_rows=len(componente.valores[0]), expand_y=True,alternating_row_color=sg.theme_button_color()[1])]
+				# c = [name(componente.nombre), sg.Button('caca')]
 		layout.append(c)
+
+
+
 
 	layout.append([name('Guardar cambios'),sg.Button('Guardar',key='Go')])
 	window = sg.Window('SISTEMA PUE', layout, finalize=True, keep_on_top=True)
@@ -145,11 +166,9 @@ def cargarArchivo(FILENAME):
 
 	window= make_window(componentes)
 	for i in keylist:
-		window[i].Update(componentes[i].valor) # poner los valores iniciales
+		if(componentes[i].tipo!='TABLE'):
+			window[i].Update(componentes[i].valor) # poner los valores iniciales
 	return wb,componentes,keylist,window
-
-
-
 
 
 FILENAME = 'archivo.xlsx'
@@ -165,11 +184,12 @@ while True:
 		wb, componentes, keylist, window = cargarArchivo(FILENAME)
 	elif event == "Go":
 		for i in keylist:
-			print("["+i+"="+str(values[i])+"]",end='')
-			componentes[i].modificar(str(values[i]))
+			# if(values[i]!=None):
+			if(componentes[i].tipo!='TABLE'):
+				print("["+i+"="+str(values[i])+"]",end='')
+				componentes[i].modificar(str(values[i]))
 		print()
 		nuevoArchivo = FILENAME.split('.')[0]+'Modificado.xlsx'
 		print("Guardando cambios en " + nuevoArchivo+" ...")
 		wb.save(nuevoArchivo)
 window.close()
-

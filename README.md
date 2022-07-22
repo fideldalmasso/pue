@@ -11,7 +11,7 @@ PUE.STRING.Nombre
 
 ## Tablas
 ```
-PUE.TABLE.Nombre (no disponible)
+PUE.TABLE.Nombre
 ```
 
 ## Especiales
