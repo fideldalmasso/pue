@@ -3,6 +3,8 @@ import openpyxl
 import PySimpleGUI as sg
 import re
 
+
+
 class Componente:
 	def __init__(self, tipo1):
 		self.tipo = tipo1
@@ -65,9 +67,6 @@ def funcion(nombre,resultado):
 					lista.append(obj)
 					counter+=1
 
-
-			
-					
 			return lista
 		else:  # es una celda
 			
@@ -101,7 +100,12 @@ def make_window(componentes):
 		dots = NAME_SIZE-len(name)-2
 		return sg.Text(name + ' ' + '•'*dots, size=(NAME_SIZE,1), justification='r',pad=(0,0), font='Courier 10')
 	
-	layout=[]
+	layout=[[sg.Input(FILENAME,key='browse',readonly=True,enable_events=True,s=33), sg.FileBrowse( target='browse')]]
+
+# 				[[sg.Input(key='_FILEBROWSE_', enable_events=True, visible=False)],
+#             [sg.FileBrowse(target='_FILEBROWSE_')],
+#             [sg.OK()],]
+
 	for i in componentes.keys():
 		componente = componentes[i]
 		match componente.tipo:
@@ -119,43 +123,53 @@ def make_window(componentes):
 
 		layout.append(c)
 
-	layout.append([name('Go'),sg.Button('Go',key='Go')])
+	layout.append([name('Guardar cambios'),sg.Button('Guardar',key='Go')])
 	window = sg.Window('SISTEMA PUE', layout, finalize=True, keep_on_top=True)
 	return window
 
-wb = openpyxl.load_workbook('archivo3.xlsx')
-# sheet = wb['Sheet1']
 
-# obtener todos los rangos
-componentes={}
-keylist=[]
-for i in wb.defined_names.definedName:
-	dests = i.destinations # returns a generator of (worksheet title, cell range) tuples
-	for title, coord in dests:
-		resultado = wb[title][coord]
-	oneOrMoreComponents = funcion(i.name,resultado)
-	if(oneOrMoreComponents!=None):
-		for c in oneOrMoreComponents:
-			componentes[c.nombre]=c
-			keylist.append(c.nombre)
+def cargarArchivo(FILENAME):
+	wb = openpyxl.load_workbook(FILENAME)
+	componentes={}
+	keylist=[]
+	# obtener todos los rangos
+	for i in wb.defined_names.definedName:
+		dests = i.destinations # returns a generator of (worksheet title, cell range) tuples
+		for title, coord in dests:
+			resultado = wb[title][coord]
+			oneOrMoreComponents = funcion(i.name,resultado)
+			if(oneOrMoreComponents!=None):
+				for c in oneOrMoreComponents:
+					componentes[c.nombre]=c
+					keylist.append(c.nombre)
+
+	window= make_window(componentes)
+	for i in keylist:
+		window[i].Update(componentes[i].valor) # poner los valores iniciales
+	return wb,componentes,keylist,window
 
 
 
-window= make_window(componentes)
-for i in keylist:
-	window[i].Update(componentes[i].valor)
 
+
+FILENAME = 'archivo.xlsx'
+wb, componentes, keylist, window = cargarArchivo(FILENAME)
 while True:
 	event, values = window.read()
 	# sg.popup(event, values)  # show the results of the read in a popup Window
 	if event == sg.WIN_CLOSED or event == 'Exit':
 		break
+	if event == "browse":
+		window.close()
+		FILENAME=str(values['browse'])
+		wb, componentes, keylist, window = cargarArchivo(FILENAME)
 	elif event == "Go":
 		for i in keylist:
 			print("["+i+"="+str(values[i])+"]",end='')
 			componentes[i].modificar(str(values[i]))
 		print()
+		nuevoArchivo = FILENAME.split('.')[0]+'Modificado.xlsx'
+		print("Guardando cambios en " + nuevoArchivo+" ...")
+		wb.save(nuevoArchivo)
 window.close()
 
-print("Guardando cambios...")
-wb.save('archivo3Modificado.xlsx')
