@@ -11,16 +11,16 @@ for i in wb.defined_names.definedName:
 	cells = []
 	
 	for title, coord in dests:
-		rango = wb[title][coord]
+		resultado = wb[title][coord]
 
 	print('Nombre='+i.name+' Coordenada=' + coord)
-	if hasattr(rango, '__iter__'):		 # es un rango de celdas
-		for row in rango:
+	if hasattr(resultado, '__iter__'):		 # es un rango de celdas
+		for row in resultado:
 			for cell in row:
 				print('\tContenido=' + str(cell.value))
 	else:							 	 # es una celda
-		print('\tContenido=' + str(rango.value))
-		rango.value='HolaCambiado'
+		print('\tContenido=' + str(resultado.value))
+		resultado.value='HolaCambiado'
 
 
 wb.save('archivo2Modificado.xlsx')
