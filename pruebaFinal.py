@@ -23,7 +23,7 @@ class Componente:
 			case 'SLIDE':
 				self.resultado.value = float(nuevoValor)
 			case 'SWITCH':
-				self.resultado.value = bool(nuevoValor)
+				self.resultado.value = nuevoValor=='True' if True else False
 
 def funcion(nombre,resultado):
 
@@ -32,7 +32,7 @@ def funcion(nombre,resultado):
 	pattern = re.compile(r"""(?x)
 	(?P<Tipo>PUE\.[A-Z]+\.)
 	(
-		((?P<TrueValue>[a-zA-Z]+)\.(?P<FalseValue>[a-zA-Z]+)\.) | 
+		# ((?P<TrueValue>[a-zA-Z]+)\.(?P<FalseValue>[a-zA-Z]+)\.) | 
 		((?P<MinValue>\d+)\.(?P<MaxValue>\d+)\.(?P<Resolution>[\d\.]+)\.) |
 	)
 	(?P<Nombre>[a-zA-z0-9]+)
@@ -59,8 +59,8 @@ def funcion(nombre,resultado):
 					obj.dict['Resolution']=float(m.get('Resolution'))
 				case 'PUE.SWITCH.':
 					obj = Componente("SWITCH")
-					obj.dict['TrueValue']=m.get('MinValue')
-					obj.dict['FalseValue']=m.get('MaxValue')
+					# obj.dict['TrueValue']=m.get('MinValue')
+					# obj.dict['FalseValue']=m.get('MaxValue')
 				case _:
 					print('Error! No se matchea con ningun caso!')
 			obj.valor = resultado.value
@@ -91,22 +91,13 @@ def make_window(componentes):
 				c = [name(componente.nombre), sg.Slider((componente.dict['MinValue'],componente.dict['MaxValue']), orientation='h', s=(10,15),resolution=componente.dict['Resolution'],key=componente.nombre)]
 				# c.Update(componente.valor)
 			case 'SWITCH':
-				c = [name(componente.nombre), sg.Checkbox(componente.dict['TrueValue'],key=componente.nombre)],
+				c = [name(componente.nombre), sg.Checkbox('',key=componente.nombre)],
 
 		layout.append(c)
 
 	layout.append([name('Go'),sg.Button('Go',key='Go')])
 	window = sg.Window('PRUEBA', layout, finalize=True, keep_on_top=True)
 	return window
-
-
-
-
-
-
-
-
-
 
 wb = openpyxl.load_workbook('archivo3.xlsx')
 sheet = wb['Sheet1']
