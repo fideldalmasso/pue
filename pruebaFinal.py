@@ -23,7 +23,7 @@ class Componente:
 			case 'SLIDE':
 				self.resultado.value = float(nuevoValor)
 			case 'SWITCH':
-				self.resultado.value = nuevoValor=='True' if True else False
+				self.resultado.value = nuevoValor=='True'
 
 def funcion(nombre,resultado):
 
@@ -45,6 +45,30 @@ def funcion(nombre,resultado):
 		m=m.groupdict()
 		if hasattr(resultado, '__iter__'):  # es un rango de celdas
 			pass
+			lista = []
+			
+			counter=0
+			for row in resultado:
+				for cell in row:
+					match m.get('Tipo'):
+						case 'PUE.NUM.':
+							obj = Componente("NUM")
+						case 'PUE.STRING.':
+							obj = Componente("STRING")
+						case 'PUE.SLIDE.':
+							print("Warning: Range SLIDE not supported!")
+						case 'PUE.SWITCH.':
+							obj = Componente("SWITCH")
+					obj.nombre = m.get('Nombre')+"{"+str(counter)+"}"
+					obj.resultado = cell
+					obj.valor=cell.value
+					lista.append(obj)
+					counter+=1
+
+
+			
+					
+			return lista
 		else:  # es una celda
 			
 			match m.get('Tipo'):
@@ -66,7 +90,7 @@ def funcion(nombre,resultado):
 			obj.valor = resultado.value
 			obj.nombre = m.get('Nombre')
 			obj.resultado= resultado
-	return obj
+			return [obj]
 
 
 
@@ -91,16 +115,16 @@ def make_window(componentes):
 				c = [name(componente.nombre), sg.Slider((componente.dict['MinValue'],componente.dict['MaxValue']), orientation='h', s=(10,15),resolution=componente.dict['Resolution'],key=componente.nombre)]
 				# c.Update(componente.valor)
 			case 'SWITCH':
-				c = [name(componente.nombre), sg.Checkbox('',key=componente.nombre)],
+				c = [name(componente.nombre), sg.Checkbox('',default=componente.valor=='True',key=componente.nombre)],
 
 		layout.append(c)
 
 	layout.append([name('Go'),sg.Button('Go',key='Go')])
-	window = sg.Window('PRUEBA', layout, finalize=True, keep_on_top=True)
+	window = sg.Window('SISTEMA PUE', layout, finalize=True, keep_on_top=True)
 	return window
 
 wb = openpyxl.load_workbook('archivo3.xlsx')
-sheet = wb['Sheet1']
+# sheet = wb['Sheet1']
 
 # obtener todos los rangos
 componentes={}
@@ -109,10 +133,11 @@ for i in wb.defined_names.definedName:
 	dests = i.destinations # returns a generator of (worksheet title, cell range) tuples
 	for title, coord in dests:
 		resultado = wb[title][coord]
-	componente = funcion(i.name,resultado)
-	if(componente!=None):
-		componentes[componente.nombre]=componente
-		keylist.append(componente.nombre)
+	oneOrMoreComponents = funcion(i.name,resultado)
+	if(oneOrMoreComponents!=None):
+		for c in oneOrMoreComponents:
+			componentes[c.nombre]=c
+			keylist.append(c.nombre)
 
 
 
@@ -134,4 +159,3 @@ window.close()
 
 print("Guardando cambios...")
 wb.save('archivo3Modificado.xlsx')
-
