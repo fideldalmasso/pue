@@ -13,9 +13,17 @@ class Componente:
 		self.resultado=""
 		# self.coordenada = coor1
 	
-	def modificar(nuevoValor):
-		valor = nuevoValor
-		resultado.value = nuevoValor
+	def modificar(self,nuevoValor):
+		self.valor = nuevoValor
+		match self.tipo:
+			case 'NUM':
+				self.resultado.value = float(nuevoValor)
+			case 'STRING':
+				self.resultado.value = nuevoValor
+			case 'SLIDE':
+				self.resultado.value = float(nuevoValor)
+			case 'SWITCH':
+				self.resultado.value = bool(nuevoValor)
 
 def funcion(nombre,resultado):
 
@@ -25,7 +33,7 @@ def funcion(nombre,resultado):
 	(?P<Tipo>PUE\.[A-Z]+\.)
 	(
 		((?P<TrueValue>[a-zA-Z]+)\.(?P<FalseValue>[a-zA-Z]+)\.) | 
-		((?P<MinValue>\d+)\.(?P<MaxValue>\d+)\.) |
+		((?P<MinValue>\d+)\.(?P<MaxValue>\d+)\.(?P<Resolution>[\d\.]+)\.) |
 	)
 	(?P<Nombre>[a-zA-z0-9]+)
 	""",re.VERBOSE)
@@ -48,13 +56,14 @@ def funcion(nombre,resultado):
 					obj = Componente("SLIDE")
 					obj.dict['MinValue']=m.get('MinValue')
 					obj.dict['MaxValue']=m.get('MaxValue')
+					obj.dict['Resolution']=float(m.get('Resolution'))
 				case 'PUE.SWITCH.':
 					obj = Componente("SWITCH")
 					obj.dict['TrueValue']=m.get('MinValue')
 					obj.dict['FalseValue']=m.get('MaxValue')
 				case _:
 					print('Error! No se matchea con ningun caso!')
-			obj.value = resultado.value
+			obj.valor = resultado.value
 			obj.nombre = m.get('Nombre')
 			obj.resultado= resultado
 	return obj
@@ -70,7 +79,8 @@ def make_window(componentes):
 	
 	layout=[]
 	for i in componentes.keys():
-		match componentes[i].tipo:
+		componente = componentes[i]
+		match componente.tipo:
 			case 'NUM':
 				c = [name(componente.nombre),sg.InputText(s=15,key=componente.nombre)]
 				# c.Update(componente.valor)
@@ -78,7 +88,7 @@ def make_window(componentes):
 				c = [name(componente.nombre),sg.InputText(s=15,key=componente.nombre)]
 				# c.Update(componente.valor)
 			case 'SLIDE':
-				c = [name(componente.nombre), sg.Slider((componente.dict['MinValue'],componente.dict['MaxValue']), orientation='h', s=(10,15),key=componente.nombre)]
+				c = [name(componente.nombre), sg.Slider((componente.dict['MinValue'],componente.dict['MaxValue']), orientation='h', s=(10,15),resolution=componente.dict['Resolution'],key=componente.nombre)]
 				# c.Update(componente.valor)
 			case 'SWITCH':
 				c = [name(componente.nombre), sg.Checkbox(componente.dict['TrueValue'],key=componente.nombre)],
@@ -116,6 +126,8 @@ for i in wb.defined_names.definedName:
 
 
 window= make_window(componentes)
+for i in keylist:
+	window[i].Update(componentes[i].valor)
 
 while True:
 	event, values = window.read()
@@ -125,7 +137,7 @@ while True:
 	elif event == "Go":
 		for i in keylist:
 			print("["+i+"="+str(values[i])+"]",end='')
-			componentes[i].modificar(values[i])
+			componentes[i].modificar(str(values[i]))
 		print()
 window.close()
 
