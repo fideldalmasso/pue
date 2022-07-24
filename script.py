@@ -1,4 +1,3 @@
-from asyncio import run_coroutine_threadsafe
 import openpyxl
 import PySimpleGUI as sg
 import re
@@ -28,12 +27,11 @@ class Componente:
 def funcion(nombre,resultado):
 
 	obj = None
-
-	pattern = re.compile(r"""(?x)
-	(?P<Tipo>PUE\.[A-Z]+\.)
+	separador="[\.\_]"
+	pattern = re.compile(rf"""(?x)
+	(?P<Tipo>PUE{separador}[A-Z]+){separador}
 	(
-		# ((?P<TrueValue>[a-zA-Z]+)\.(?P<FalseValue>[a-zA-Z]+)\.) | 
-		((?P<MinValue>\d+)\.(?P<MaxValue>\d+)\.(?P<Resolution>[\d\.]+)\.) |
+		((?P<MinValue>\d+){separador}(?P<MaxValue>\d+){separador}(?P<Resolution>[\d\.]+){separador}) |
 	)
 	(?P<Nombre>[a-zA-z0-9_]+)
 	""",re.VERBOSE)
@@ -45,7 +43,7 @@ def funcion(nombre,resultado):
 		m=m.groupdict()
 		if hasattr(resultado, '__iter__'):  # es un rango de celdas
 
-			if m.get('Tipo')=='PUE.TABLE.':
+			if m.get('Tipo')=='PUE.TABLE' or  m.get('Tipo')=='PUE_TABLE':
 				obj = Componente("TABLE")
 				obj.nombre = str(m.get('Nombre'))
 				h=len(resultado)
@@ -66,13 +64,13 @@ def funcion(nombre,resultado):
 				for row in resultado:
 					for cell in row:
 						match m.get('Tipo'):
-							case 'PUE.NUM.':
+							case "PUE.NUM" | "PUE_NUM":
 								obj = Componente("NUM")
-							case 'PUE.STRING.':
+							case 'PUE.STRING' | "PUE_STRING":
 								obj = Componente("STRING")
-							case 'PUE.SLIDE.':
+							case 'PUE.SLIDE.' | 'PUE_SLIDE':
 								print("Warning: Range SLIDE not supported!")
-							case 'PUE.SWITCH.':
+							case 'PUE.SWITCH' | "PUE_SWITCH":
 								obj = Componente("SWITCH")
 							case _:
 								print('Error! No se matchea con ningun caso!')
@@ -86,16 +84,16 @@ def funcion(nombre,resultado):
 		else:  # es una celda
 			
 			match m.get('Tipo'):
-				case 'PUE.NUM.':
+				case "PUE.NUM" | "PUE_NUM":
 					obj = Componente("NUM")
-				case 'PUE.STRING.':
+				case 'PUE.STRING' | "PUE_STRING":
 					obj = Componente("STRING")
-				case 'PUE.SLIDE.':
+				case 'PUE.SLIDE' | 'PUE_SLIDE':
 					obj = Componente("SLIDE")
 					obj.dict['MinValue']=m.get('MinValue')
 					obj.dict['MaxValue']=m.get('MaxValue')
 					obj.dict['Resolution']=float(m.get('Resolution'))
-				case 'PUE.SWITCH.':
+				case 'PUE.SWITCH' | "PUE_SWITCH":
 					obj = Componente("SWITCH")
 					# obj.dict['TrueValue']=m.get('MinValue')
 					# obj.dict['FalseValue']=m.get('MaxValue')
@@ -145,7 +143,7 @@ def make_window(componentes):
 
 
 	layout.append([name('Guardar cambios'),sg.Button('Guardar',key='Go')])
-	window = sg.Window('SISTEMA PUE', layout, finalize=True, keep_on_top=True)
+	window = sg.Window('SISTEMA PUE', layout, finalize=True, scaling=2.5)
 	return window
 
 
@@ -179,9 +177,15 @@ while True:
 	if event == sg.WIN_CLOSED or event == 'Exit':
 		break
 	if event == "browse":
-		window.close()
-		FILENAME=str(values['browse'])
-		wb, componentes, keylist, window = cargarArchivo(FILENAME)
+		
+		newFileName=str(values['browse'])
+		if(newFileName[-5:]==".xlsx"):
+			window.close()
+			FILENAME=str(values['browse'])
+			wb, componentes, keylist, window = cargarArchivo(FILENAME)
+		else:
+			sg.popup('No es un archivo excel!')
+			
 	elif event == "Go":
 		for i in keylist:
 			# if(values[i]!=None):
